@@ -1,12 +1,13 @@
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
+import 'package:myfirstapp/screens/home/home_screen.dart';
 import 'package:myfirstapp/screens/provider/auto_provider.dart';
 import 'package:provider/provider.dart';
 import '../common/custom_button.dart';
 import '../loader/loader_provider.dart';
 import 'package:flutter/services.dart';
 
-class CustomTextField extends StatefulWidget {
+class CustomTextField extends StatelessWidget {
   final String label;
   final IconData icon;
   final String inputType;
@@ -23,81 +24,150 @@ class CustomTextField extends StatefulWidget {
   });
 
   @override
-  CustomTextFieldState createState() => CustomTextFieldState();
-}
-
-class CustomTextFieldState extends State<CustomTextField> {
-  bool _obscureText = true;
-
-  @override
   Widget build(BuildContext context) {
     TextInputType keyboardType;
     List<TextInputFormatter>? inputFormatters;
-    bool isPassword = false;
+    bool isPassword = inputType == "password";
 
-    switch (widget.inputType) {
+    switch (inputType) {
       case "email":
         keyboardType = TextInputType.emailAddress;
-        inputFormatters = [
-          FilteringTextInputFormatter.deny(RegExp(r'\s')),
-        ];
-        break;
-      case "password":
-        keyboardType = TextInputType.text;
-        isPassword = true;
+        inputFormatters = [FilteringTextInputFormatter.deny(RegExp(r'\s'))];
         break;
       case "phone":
         keyboardType = TextInputType.phone;
-        inputFormatters = [
-          FilteringTextInputFormatter.digitsOnly,
-        ];
+        inputFormatters = [FilteringTextInputFormatter.digitsOnly];
         break;
       default:
         keyboardType = TextInputType.text;
     }
 
     return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 8.0),
-      child: TextField(
-        controller: widget.controller,
-        obscureText: isPassword ? _obscureText : false,
+      padding: const EdgeInsets.symmetric(vertical: 10.0, horizontal: 15),
+      child: isPassword
+          ? _PasswordTextField(
+        label: label,
+        icon: icon,
+        controller: controller,
+        maxLength: maxLength,
+      )
+          : _RegularTextField(
+        label: label,
+        icon: icon,
         keyboardType: keyboardType,
-        maxLength: widget.maxLength,
         inputFormatters: inputFormatters,
-        decoration: InputDecoration(
-          labelText: widget.label,
-          prefixIcon: Icon(widget.icon, color: Colors.blue),
-          suffixIcon: isPassword
-              ? IconButton(
-            icon: Icon(
-              _obscureText ? Icons.visibility_off : Icons.visibility,
-              color: Colors.grey,
-            ),
-            onPressed: () {
-              setState(() {
-                _obscureText = !_obscureText;
-              });
-            },
-          )
-              : null,
-          border: OutlineInputBorder(
-            borderRadius: BorderRadius.circular(15),
-            borderSide: const BorderSide(color: Colors.blueAccent, width: 1.5),
-          ),
-          focusedBorder: OutlineInputBorder(
-            borderRadius: BorderRadius.circular(15),
-            borderSide: const BorderSide(color: Colors.blue, width: 2),
-          ),
-          filled: true,
-          fillColor: Colors.white.withValues(alpha: 0.9),
-          counterText: "",
-        ),
-        style: const TextStyle(fontSize: 16),
+        controller: controller,
+        maxLength: maxLength,
       ),
     );
   }
 }
 
+// Widget for regular text fields
+class _RegularTextField extends StatelessWidget {
+  final String label;
+  final IconData icon;
+  final TextInputType keyboardType;
+  final List<TextInputFormatter>? inputFormatters;
+  final TextEditingController? controller;
+  final int maxLength;
+
+  const _RegularTextField({
+    required this.label,
+    required this.icon,
+    required this.keyboardType,
+    this.inputFormatters,
+    this.controller,
+    required this.maxLength,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return TextField(
+      controller: controller,
+      keyboardType: keyboardType,
+      maxLength: maxLength,
+      inputFormatters: inputFormatters,
+      decoration: _buildInputDecoration(icon, label),
+      style: const TextStyle(fontSize: 16),
+    );
+  }
+}
+
+// Widget for password field with visibility toggle
+class _PasswordTextField extends StatefulWidget {
+  final String label;
+  final IconData icon;
+  final TextEditingController? controller;
+  final int maxLength;
+
+  const _PasswordTextField({
+    required this.label,
+    required this.icon,
+    this.controller,
+    required this.maxLength,
+  });
+
+  @override
+  _PasswordTextFieldState createState() => _PasswordTextFieldState();
+}
+
+class _PasswordTextFieldState extends State<_PasswordTextField> {
+  final ValueNotifier<bool> _obscureText = ValueNotifier<bool>(true);
+
+  @override
+  Widget build(BuildContext context) {
+    return ValueListenableBuilder<bool>(
+      valueListenable: _obscureText,
+      builder: (context, obscureText, child) {
+        return TextField(
+          controller: widget.controller,
+          obscureText: obscureText,
+          maxLength: widget.maxLength,
+          decoration: _buildInputDecoration(
+            widget.icon,
+            widget.label,
+            suffixIcon: IconButton(
+              icon: AnimatedSwitcher(
+                duration: const Duration(milliseconds: 250),
+                transitionBuilder: (child, anim) => FadeTransition(opacity: anim, child: child),
+                child: Icon(
+                  obscureText ? Icons.visibility_off : Icons.visibility,
+                  key: ValueKey<bool>(obscureText),
+                  color: Colors.grey,
+                ),
+              ),
+              onPressed: () => _obscureText.value = !_obscureText.value,
+            ),
+          ),
+          style: const TextStyle(fontSize: 16),
+        );
+      },
+    );
+  }
+}
+
+// Common Input Decoration
+InputDecoration _buildInputDecoration(IconData icon, String label, {Widget? suffixIcon}) {
+  return InputDecoration(
+    labelText: label,
+    labelStyle: const TextStyle(fontSize: 14, color: Colors.blueAccent),
+    prefixIcon: Icon(icon, color: Colors.blueAccent),
+    suffixIcon: suffixIcon,
+    border: OutlineInputBorder(
+      borderRadius: BorderRadius.circular(15),
+      borderSide: const BorderSide(color: Colors.blueAccent, width: 1.5),
+    ),
+    focusedBorder: OutlineInputBorder(
+      borderRadius: BorderRadius.circular(15),
+      borderSide: const BorderSide(color: Colors.blue, width: 2),
+    ),
+    filled: true,
+    fillColor: Colors.white.withValues(alpha: 0.95),
+    counterText: "",
+    contentPadding: const EdgeInsets.symmetric(vertical: 14, horizontal: 16),
+  );
+}
 
 
 class LoginView extends StatelessWidget {
@@ -106,7 +176,6 @@ class LoginView extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final authProvider = Provider.of<AuthProvider>(context, listen: false);
-
     return Padding(
       padding: const EdgeInsets.all(20.0),
       child: Column(
@@ -128,6 +197,7 @@ class LoginView extends StatelessWidget {
           const SizedBox(height: 20),
           CustomLoadingButton(
             onPressed: (){
+              Navigator.push(context, MaterialPageRoute(builder: (context)=>const HomeScreen()));
               if (kDebugMode) {
                 print("Tapped");
               }
@@ -159,7 +229,6 @@ class RegisterView extends StatelessWidget {
           const SizedBox(height: 15),
           const CustomTextField(label: 'Email', icon: Icons.email),
           const SizedBox(height: 15),
-          //const CustomTextField(label: 'Password', icon: Icons.lock, isPassword: true),
           const SizedBox(height: 20),
           _buildButton("Login", Colors.blue, () {
             final loaderProvider = Provider.of<LoaderProvider>(context, listen: false);

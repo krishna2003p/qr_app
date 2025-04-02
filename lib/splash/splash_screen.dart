@@ -2,7 +2,9 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 import 'package:font_awesome_flutter/font_awesome_flutter.dart';
+import 'package:myfirstapp/screens/home/home_screen.dart';
 
+import '../resources/images.dart';
 import '../screens/login_screen.dart';
 
 class SplashScreen extends StatefulWidget {
@@ -16,6 +18,7 @@ class SplashScreenState extends State<SplashScreen> {
   bool _showText = false;
   bool _isExiting = false;
   double _sparklePosition = -1.0;
+  Timer? _sparkleTimer;
 
   @override
   void initState() {
@@ -36,7 +39,7 @@ class SplashScreenState extends State<SplashScreen> {
       Timer(const Duration(milliseconds: 500), () {
         Navigator.of(context).pushReplacement(
           PageRouteBuilder(
-            pageBuilder: (context, animation, secondaryAnimation) =>  const AuthScreen(),
+            pageBuilder: (context, animation, secondaryAnimation) => const AuthScreen(),
             transitionsBuilder: (context, animation, secondaryAnimation, child) {
               return SlideTransition(
                 position: Tween<Offset>(
@@ -59,15 +62,25 @@ class SplashScreenState extends State<SplashScreen> {
   void _startSparkleAnimation() {
     const duration = Duration(seconds: 2);
     const interval = Duration(milliseconds: 16);
-    Timer.periodic(interval, (timer) {
-      if (_sparklePosition >= 1.0) {
-        _sparklePosition = -1.0;
-      } else {
-        setState(() {
-          _sparklePosition += interval.inMilliseconds / duration.inMilliseconds;
-        });
+
+    _sparkleTimer = Timer.periodic(interval, (timer) {
+      if (!mounted) {
+        timer.cancel();
+        return;
       }
+      setState(() {
+        if (_sparklePosition >= 1.0) {
+          _sparklePosition = -1.0;
+        } else {
+          _sparklePosition += interval.inMilliseconds / duration.inMilliseconds;
+        }
+      });
     });
+  }
+  @override
+  void dispose() {
+    _sparkleTimer?.cancel();
+    super.dispose();
   }
 
   @override
@@ -132,7 +145,7 @@ class SplashScreenState extends State<SplashScreen> {
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
                 Image.asset(
-                  'assets/images/logo.png',
+                  Images.logo,
                   width: screenWidth * 0.5,
                   height: screenWidth * 0.5,
                 )
